@@ -4,7 +4,7 @@ The database schema has been consolidated into `../init.sql`.
 
 ## For Fresh Installations
 
-The `init.sql` file contains the complete schema and will be automatically run when the database container starts with an empty data volume.
+The `init.sql` file contains the schema for fresh installations. Development-only local accounts live in `../seed-dev.sql` and are mounted only by `docker-compose.dev.yaml`.
 
 ## For Existing Databases
 

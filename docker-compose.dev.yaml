@@ -75,7 +75,8 @@ services:
       - "5432:5432"
     volumes:
       - ./data-dev/postgres:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./database/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+      - ./database/seed-dev.sql:/docker-entrypoint-initdb.d/20-seed-dev.sql:ro
       - ./database/migrations:/docker-entrypoint-initdb.d/migrations:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sim-rq_user -d sim-rq"]
@@ -104,6 +105,8 @@ services:
       DB_NAME: sim-rq
       DB_USER: sim-rq_user
       DB_PASSWORD: ${DB_PASSWORD:-SimRQ2025!Secure}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       CORS_ORIGIN: ${DEV_CORS_ORIGIN:-http://localhost:5173}
       PORT: 3001
       LOG_LEVEL: debug

@@ -17,14 +17,12 @@ export interface TestUser {
 /**
  * Test user credentials
  *
- * Passwords can be overridden via environment variables:
- * - QADMIN_PASSWORD: Bootstrap admin account (not a test account)
- * - TEST_MANAGER_PASSWORD, TEST_ENGINEER_PASSWORD, TEST_USER_PASSWORD: Test accounts
+ * Defaults match database/seed-dev.sql and can be overridden for custom test fixtures.
  */
 export const TEST_USERS = {
   admin: {
     email: 'qadmin@sim-rq.local',
-    password: process.env.QADMIN_PASSWORD || 'admin123',
+    password: process.env.BOOTSTRAP_ADMIN_PASSWORD || process.env.QADMIN_PASSWORD || 'admin123',
     name: 'qAdmin',
     role: 'Admin' as const,
   },

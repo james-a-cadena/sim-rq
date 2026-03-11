@@ -15,6 +15,7 @@ export function validateConfig(): ConfigValidationResult {
   const isProduction = process.env.NODE_ENV === 'production';
   const errors: string[] = [];
   const warnings: string[] = [];
+  const knownDevPasswords = ['admin123', 'manager123', 'engineer123', 'user123'];
 
   // Validate CORS_ORIGIN
   const corsOrigin = process.env.CORS_ORIGIN;
@@ -55,7 +56,14 @@ export function validateConfig(): ConfigValidationResult {
   // Validate DB_PASSWORD
   const dbPassword = process.env.DB_PASSWORD;
   const insecureDbPasswords = ['password', '123456', 'sim-rq', 'simrq', 'postgres', 'admin'];
-  if (dbPassword && insecureDbPasswords.some(insecure => dbPassword.toLowerCase() === insecure)) {
+  if (dbPassword === 'SimRQ2025!Secure') {
+    const message = 'DB_PASSWORD uses a committed repository default. Set a unique password in production.';
+    if (isProduction) {
+      errors.push(message);
+    } else {
+      warnings.push(message);
+    }
+  } else if (dbPassword && insecureDbPasswords.some(insecure => dbPassword.toLowerCase() === insecure)) {
     const message = 'DB_PASSWORD appears to be a weak password. Use a strong password in production.';
     if (isProduction) {
       errors.push(message);
@@ -79,6 +87,16 @@ export function validateConfig(): ConfigValidationResult {
       } else {
         warnings.push(message);
       }
+    }
+  }
+
+  const bootstrapAdminPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD || process.env.QADMIN_PASSWORD;
+  if (bootstrapAdminPassword && knownDevPasswords.includes(bootstrapAdminPassword)) {
+    const message = 'BOOTSTRAP_ADMIN_PASSWORD uses a known development default. Set a unique bootstrap admin password in production.';
+    if (isProduction) {
+      errors.push(message);
+    } else {
+      warnings.push(message);
     }
   }
 

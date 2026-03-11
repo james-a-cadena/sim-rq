@@ -186,7 +186,7 @@ You can import this specification into:
 **Login:**
 
 ```bash
-# Replace <password> with QADMIN_PASSWORD from your .env file
+# Replace <password> with the current local admin password
 curl -c cookies.txt -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"qadmin@sim-rq.local","password":"<password>"}'

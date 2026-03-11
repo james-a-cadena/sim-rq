@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  frontend:
+    name: Frontend Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Frontend unit tests
+        run: npm test -- --run
+
+      - name: Frontend typecheck
+        run: npx tsc --noEmit --skipLibCheck
+
+      - name: Frontend build
+        run: npm run build
+
+  backend:
+    name: Backend Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Backend unit tests
+        run: npm test -- --run
+        working-directory: backend
+
+      - name: Backend lint
+        run: npm run lint
+        working-directory: backend
+
+      - name: Backend build
+        run: npm run build
+        working-directory: backend
+
+  docker-build:
+    name: Docker Build Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: docker build -f Dockerfile .
+
+      - name: Build backend image
+        run: docker build -f backend/Dockerfile backend

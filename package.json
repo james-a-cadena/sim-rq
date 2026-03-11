@@ -1,6 +1,6 @@
 {
   "name": "sim-rq-dashboard",
-  "version": "0.9.6",
+  "version": "0.10.1",
   "description": "Role-based engineering simulation request management system",
   "author": "Sim RQ Contributors",
   "license": "MIT",

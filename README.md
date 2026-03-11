@@ -1,7 +1,7 @@
 # Sim RQ
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.9.8--beta-blue.svg)](https://github.com/j-cadena1/sim-rq/releases)
+[![Version](https://img.shields.io/badge/version-unreleased-orange.svg)](https://github.com/j-cadena1/sim-rq/releases)
 [![Docker](https://img.shields.io/badge/Docker-First-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
@@ -87,32 +87,22 @@ make status       # Show container status
 make clean        # Remove all containers
 ```
 
-## Default Credentials (Development Only)
+## Local Accounts
 
-**Bootstrap Admin Account:**
+**Development and test environments only:**
 
-The `qadmin@sim-rq.local` account is used for initial SSO configuration only:
-
-- Email: `qadmin@sim-rq.local`
-- Password: Set via `QADMIN_PASSWORD` in `.env` (default: `admin123`)
-
-After configuring Entra ID and syncing Admin users, disable qAdmin via Settings > User Management.
-
-**Test Accounts (for RBAC testing in development):**
-
+- Admin: `qadmin@sim-rq.local` / `admin123`
 - Manager: `bob@sim-rq.local` / `manager123`
 - Engineer: `charlie@sim-rq.local` / `engineer123`
 - User: `alice@sim-rq.local` / `user123`
 
-Test passwords can be overridden via environment variables. See `.env.example`.
+**Production bootstrap (optional):**
 
-**⚠️ Production Deployment:**
-
-- Set a strong `QADMIN_PASSWORD` in `.env`
+- Set `BOOTSTRAP_ADMIN_PASSWORD` and optionally `BOOTSTRAP_ADMIN_EMAIL` in `.env` before the first start if you need a temporary local bootstrap admin
 - Configure Microsoft Entra ID SSO (see SSO Configuration section)
-- Disable qAdmin after SSO is configured
+- Disable the local bootstrap admin after SSO is configured
 - All real users should authenticate via SSO
-- Disable the local administrator account and delete local users
+- No local users are seeded by the production database initialization path
 
 ## HTTPS Setup
 
@@ -120,7 +110,7 @@ Choose one of two approaches for HTTPS:
 
 ### Option 1: Native SSL (Recommended for simplicity)
 
-SimRQ can terminate TLS natively using Let's Encrypt certificates via Cloudflare DNS. No reverse proxy needed.
+Sim RQ can terminate TLS natively using Let's Encrypt certificates via Cloudflare DNS. No reverse proxy needed.
 
 **Requirements:**
 
@@ -210,6 +200,10 @@ Create `.env` for production:
 ```bash
 # Database
 DB_PASSWORD=YourStrongPassword123!
+
+# Optional bootstrap admin for first sign-in only
+BOOTSTRAP_ADMIN_PASSWORD=$(openssl rand -base64 24)
+# BOOTSTRAP_ADMIN_EMAIL=qadmin@sim-rq.local
 
 # SSO Encryption (REQUIRED if using SSO)
 ENTRA_SSO_ENCRYPTION_KEY=$(openssl rand -base64 32)
@@ -302,7 +296,7 @@ make test         # Unit tests (backend + frontend in containers)
 make test-e2e     # E2E tests (Playwright in container)
 ```
 
-**Test suite:** 633 tests total (86 E2E + 124 frontend unit + 423 backend unit tests) covering auth, roles, requests, lifecycle, analytics, forms, navigation, and notifications.
+The automated test suite covers frontend unit tests, backend unit tests, and Playwright E2E flows for auth, roles, requests, lifecycle, analytics, forms, navigation, and notifications.
 
 Test reports are saved to `./playwright-report/` and `./test-results/`.
 

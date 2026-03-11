@@ -21,6 +21,7 @@ import { initializeEmailDigestService, stopEmailDigestService } from './services
 import { initializeRedis, shutdownRedis, getRedisStatus } from './services/redisService';
 import { initializeStorage, shutdownStorage, getStorageStatus } from './services/storageService';
 import { startCleanupInterval as startPendingUploadsCleanup, stopCleanupInterval as stopPendingUploadsCleanup } from './services/cleanupService';
+import { ensureBootstrapAdmin } from './services/bootstrapAdminService';
 import { swaggerSpec } from './config/swagger';
 import authRouter from './routes/auth';
 import requestsRouter from './routes/requests';
@@ -215,6 +216,11 @@ const httpServer = http.createServer(app);
  * Redis is initialized first (if configured), then WebSocket can use Redis adapter
  */
 async function startServer(): Promise<void> {
+  await ensureBootstrapAdmin({
+    email: process.env.BOOTSTRAP_ADMIN_EMAIL || process.env.QADMIN_EMAIL,
+    password: process.env.BOOTSTRAP_ADMIN_PASSWORD || process.env.QADMIN_PASSWORD,
+  });
+
   // Initialize Redis first (if configured) - rate limiting and WebSocket depend on it
   await initializeRedis();
 

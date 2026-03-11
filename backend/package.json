@@ -1,6 +1,6 @@
 {
   "name": "sim-rq-backend",
-  "version": "0.9.6",
+  "version": "0.10.1",
   "description": "Sim RQ Backend API",
   "author": "Sim RQ Contributors",
   "license": "MIT",

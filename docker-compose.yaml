@@ -78,13 +78,13 @@ services:
       TZ: America/Toronto
       POSTGRES_DB: sim-rq
       POSTGRES_USER: sim-rq_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-SimRQ2025!Secure}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set for production}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     # Database port not exposed to host in production - only accessible within Docker network
     # Use docker-compose.dev.yaml for development with exposed ports
     volumes:
       - ./data-prod/postgres:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./database/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
       - ./database/migrations:/docker-entrypoint-initdb.d/migrations:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sim-rq_user -d sim-rq"]
@@ -112,7 +112,9 @@ services:
       DB_PORT: 5432
       DB_NAME: sim-rq
       DB_USER: sim-rq_user
-      DB_PASSWORD: ${DB_PASSWORD:-SimRQ2025!Secure}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set for production}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       PORT: 3001
       LOG_LEVEL: info

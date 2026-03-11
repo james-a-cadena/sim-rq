@@ -241,7 +241,7 @@ cp .env.example .env
 make dev
 
 # 2. Test credentials (development only)
-# Admin: qadmin@sim-rq.local / (see QADMIN_PASSWORD in .env)
+# Admin: qadmin@sim-rq.local / admin123
 # Manager: bob@sim-rq.local / manager123
 # Engineer: charlie@sim-rq.local / engineer123
 # End-User: alice@sim-rq.local / user123
@@ -267,7 +267,7 @@ make dev
 ### Pre-Deployment Verification
 
 **Environment Variables:**
-- [ ] `QADMIN_PASSWORD` changed from default (min 12 characters)
+- [ ] `BOOTSTRAP_ADMIN_PASSWORD` is set only if a temporary local bootstrap admin is needed
 - [ ] `DB_PASSWORD` is strong and unique
 - [ ] `ENTRA_SSO_ENCRYPTION_KEY` set (32+ characters)
 - [ ] `CORS_ORIGIN` set to specific production domain

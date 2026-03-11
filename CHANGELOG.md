@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Removed seeded local users from the production database initialization path
+- Added first-start bootstrap admin support via `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`
+- Hardened production config validation to reject committed repository defaults for database and bootstrap credentials
+
 ### Changed
 
 - **Redis 8 upgrade** - Updated from Redis 7 to Redis 8 (Phase 1 of major dependency upgrades)
@@ -24,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - file-type: 20.5.0 → 21.1.1 (better format detection)
   - sharp: 0.33.5 → 0.34.5 (image processing improvements)
   - Added node-gyp to devDependencies (enables sharp source builds on Alpine)
-  - All upgrades tested with full E2E suite (82 passed)
+  - All upgrades tested with the full automated suite
 
 ## [0.9.9] - 2025-12-13
 
