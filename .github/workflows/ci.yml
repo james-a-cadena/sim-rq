@@ -41,6 +41,7 @@ jobs:
         working-directory: ${{ matrix.working-directory }}
 
   frontend:
+    needs: dependency-audit
     name: Frontend Checks
     runs-on: ubuntu-latest
     steps:
@@ -64,6 +65,7 @@ jobs:
         run: npm run build
 
   backend:
+    needs: dependency-audit
     name: Backend Checks
     runs-on: ubuntu-latest
     steps:
@@ -92,6 +94,7 @@ jobs:
         working-directory: backend
 
   docker-build:
+    needs: dependency-audit
     name: Docker Build Smoke
     runs-on: ubuntu-latest
     steps:
