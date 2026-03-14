@@ -81,6 +81,7 @@
     "vitest": "^4.0.15"
   },
   "overrides": {
-    "rollup": "^4.59.0"
+    "rollup": "^4.59.0",
+    "flatted": ">=3.4.0"
   }
 }
