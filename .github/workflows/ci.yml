@@ -7,7 +7,41 @@ on:
       - main
 
 jobs:
+  dependency-audit:
+    name: Dependency Audit (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Frontend
+            working-directory: .
+            cache-dependency-path: package-lock.json
+          - name: Backend
+            working-directory: backend
+            cache-dependency-path: backend/package-lock.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.cache-dependency-path }}
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ${{ matrix.working-directory }}
+
+      # Threshold policy:
+      # - High and critical vulnerabilities fail CI.
+      # - Moderate and below remain visible in audit output but are non-blocking.
+      - name: Run dependency audit
+        run: npm audit --audit-level=high
+        working-directory: ${{ matrix.working-directory }}
+
   frontend:
+    needs: dependency-audit
     name: Frontend Checks
     runs-on: ubuntu-latest
     steps:
@@ -31,6 +65,7 @@ jobs:
         run: npm run build
 
   backend:
+    needs: dependency-audit
     name: Backend Checks
     runs-on: ubuntu-latest
     steps:
@@ -59,6 +94,7 @@ jobs:
         working-directory: backend
 
   docker-build:
+    needs: dependency-audit
     name: Docker Build Smoke
     runs-on: ubuntu-latest
     steps:
