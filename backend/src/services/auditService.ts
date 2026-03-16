@@ -1,6 +1,18 @@
+import crypto from 'crypto';
 import { Request } from 'express';
 import pool from '../db';
 import { logger } from '../middleware/logger';
+
+/**
+ * Redact an email address using HMAC-SHA256.
+ * Returns a token of the form "hmac:<first16charsOfHexDigest>" to allow
+ * log correlation without exposing PII.
+ */
+export const redactEmail = (email: string): string => {
+  const secret = process.env.LOG_REDACTION_SECRET || 'sim-rq-log-redaction';
+  const digest = crypto.createHmac('sha256', secret).update(email).digest('hex');
+  return `hmac:${digest.slice(0, 16)}`;
+};
 
 export enum AuditAction {
   // Authentication
@@ -348,10 +360,12 @@ export const logSecurityEvent = async (
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `;
 
+    const redactedEmail = details.userEmail ? redactEmail(details.userEmail) : 'anonymous';
+
     const values = [
       details.userId || null,
-      details.userEmail || 'anonymous',
-      details.userEmail || 'anonymous',
+      redactedEmail,
+      redactedEmail,
       action,
       EntityType.AUTH,
       null,
