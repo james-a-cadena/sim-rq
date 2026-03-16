@@ -5,7 +5,7 @@
  * and file type checks. S3 operations are mocked.
  */
 
-import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { describe, test, expect, beforeAll, beforeEach, vi } from 'vitest';
 
 // Mock environment variables before importing the service
 vi.stubEnv('S3_ENDPOINT', 'http://localhost:3900');
@@ -17,16 +17,20 @@ vi.stubEnv('ALLOWED_FILE_TYPES', 'pdf,doc,docx,jpg,png,mp4');
 
 // Mock AWS SDK
 vi.mock('@aws-sdk/client-s3', () => ({
-  S3Client: vi.fn().mockImplementation(() => ({
-    send: vi.fn().mockResolvedValue({}),
-    destroy: vi.fn(),
-  })),
+  // Use a function (not arrow) so vitest 4 allows calling with `new`
+  S3Client: vi.fn().mockImplementation(function () {
+    return {
+      send: vi.fn().mockResolvedValue({}),
+      destroy: vi.fn(),
+    };
+  }),
   PutObjectCommand: vi.fn(),
   GetObjectCommand: vi.fn(),
   DeleteObjectCommand: vi.fn(),
   HeadBucketCommand: vi.fn(),
   CreateBucketCommand: vi.fn(),
   ListObjectsV2Command: vi.fn(),
+  HeadObjectCommand: vi.fn(),
 }));
 
 vi.mock('@aws-sdk/lib-storage', () => ({
@@ -59,6 +63,8 @@ import {
   isMediaType,
   getStorageConfig,
   getStorageStatus,
+  DEFAULT_MAX_FILE_SIZE_MB,
+  initializeStorage,
 } from '../storageService';
 
 describe('StorageService', () => {
@@ -270,6 +276,50 @@ describe('StorageService', () => {
       expect(config.allowedFileTypes.length).toBeGreaterThan(0);
       // Common types should be included
       expect(config.allowedFileTypes).toContain('pdf');
+    });
+  });
+
+  describe('DEFAULT_MAX_FILE_SIZE_MB constant', () => {
+    test('should export DEFAULT_MAX_FILE_SIZE_MB as 100', () => {
+      expect(DEFAULT_MAX_FILE_SIZE_MB).toBe(100);
+    });
+
+    test('default max file size should not be 3072 (the old too-permissive value)', () => {
+      expect(DEFAULT_MAX_FILE_SIZE_MB).not.toBe(3072);
+    });
+  });
+
+  describe('validateFile with storage connected', () => {
+    // Run initializeStorage once before these tests so isStorageConnected() returns
+    // true. The @aws-sdk/client-s3 mock (defined above with vi.mock) ensures
+    // HeadBucketCommand resolves successfully, setting the module-level isConnected
+    // flag to true. We use beforeAll so it runs before vi.clearAllMocks() in the
+    // outer beforeEach can interfere.
+    beforeAll(async () => {
+      await initializeStorage();
+    });
+
+    test('should reject a file that exceeds 100 MB when no env override is set', () => {
+      // MAX_FILE_SIZE_MB is stubbed to '100' at the top of this file.
+      // 101 MB should be rejected.
+      const overLimitSize = 101 * 1024 * 1024;
+      const result = _validateFile('document.pdf', 'application/pdf', overLimitSize);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/100MB/i);
+    });
+
+    test('should accept a file exactly at the 100 MB limit', () => {
+      const atLimitSize = 100 * 1024 * 1024;
+      const result = _validateFile('document.pdf', 'application/pdf', atLimitSize);
+      expect(result.valid).toBe(true);
+    });
+
+    test('should reject a file just over the 100 MB limit', () => {
+      // 1 byte over 100 MB
+      const justOverLimitSize = 100 * 1024 * 1024 + 1;
+      const result = _validateFile('document.pdf', 'application/pdf', justOverLimitSize);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/100MB/i);
     });
   });
 });
