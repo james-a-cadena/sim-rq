@@ -5,7 +5,7 @@
  * Uses Garage (https://garagehq.deuxfleurs.fr/) as the storage backend.
  *
  * If S3_ACCESS_KEY_ID is not set, file uploads are disabled.
- * Supports multipart uploads for large files (3GB+).
+ * Supports multipart uploads for large files (>5 MB).
  */
 
 import {
@@ -35,7 +35,8 @@ const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'sim-rq-attachments';
 const SIGNED_URL_EXPIRES_IN = 3600; // 1 hour
 
 // Configurable limits
-const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB || '3072', 10) * 1024 * 1024;
+export const DEFAULT_MAX_FILE_SIZE_MB = 100;
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB || String(DEFAULT_MAX_FILE_SIZE_MB), 10) * 1024 * 1024;
 const ALLOWED_FILE_TYPES = (
   process.env.ALLOWED_FILE_TYPES ||
   'pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,png,jpg,jpeg,gif,svg,webp,heic,heif,zip,mp4,mov,avi,webm,mkv,m4v'
