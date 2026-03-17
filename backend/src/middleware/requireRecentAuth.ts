@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 
 export const requireRecentAuth = (req: Request, res: Response, next: NextFunction) => {
-  const stepUpWindowMs = parseInt(process.env.STEP_UP_WINDOW_MINUTES || '15', 10) * 60 * 1000;
+  const parsedMinutes = parseInt(process.env.STEP_UP_WINDOW_MINUTES || '15', 10);
+  const stepUpWindowMs = (Number.isNaN(parsedMinutes) || parsedMinutes <= 0 ? 15 : parsedMinutes) * 60 * 1000;
 
   const user = req.user;
   if (!user) {

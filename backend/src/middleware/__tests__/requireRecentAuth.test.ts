@@ -126,6 +126,33 @@ describe('requireRecentAuth middleware', () => {
     expect(next).toHaveBeenCalledOnce();
   });
 
+  it('should fall back to 15-min default when STEP_UP_WINDOW_MINUTES is non-numeric (NaN bypass prevention)', () => {
+    process.env.STEP_UP_WINDOW_MINUTES = 'abc';
+
+    const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
+    const req = makeReq({
+      user: {
+        id: 'user-1',
+        userId: 'user-1',
+        email: 'user@example.com',
+        name: 'Test User',
+        role: 'Admin',
+        authenticatedAt: twentyMinutesAgo,
+      },
+    });
+    const { res, status, json } = makeRes();
+    const next: NextFunction = vi.fn();
+
+    requireRecentAuth(req, res, next);
+
+    // NaN would make age > NaN always false, allowing the request through — must reject instead
+    expect(status).toHaveBeenCalledWith(403);
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: 'step_up_required' })
+    );
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it('should use STEP_UP_WINDOW_MINUTES env var to configure window (5 min window, 6 min old = fail)', () => {
     process.env.STEP_UP_WINDOW_MINUTES = '5';
 
