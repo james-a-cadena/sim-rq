@@ -9,7 +9,14 @@ import { logger } from '../middleware/logger';
  * log correlation without exposing PII.
  */
 export const redactEmail = (email: string): string => {
-  const secret = process.env.LOG_REDACTION_SECRET || 'sim-rq-log-redaction';
+  const secret = process.env.LOG_REDACTION_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('LOG_REDACTION_SECRET must be set in production');
+    }
+    logger.warn('LOG_REDACTION_SECRET is not set; using dev fallback for email redaction');
+    return `hmac:${crypto.createHmac('sha256', 'sim-rq-log-redaction-dev').update(email).digest('hex').slice(0, 16)}`;
+  }
   const digest = crypto.createHmac('sha256', secret).update(email).digest('hex');
   return `hmac:${digest.slice(0, 16)}`;
 };

@@ -536,6 +536,38 @@ describe('AuditService', () => {
       const result = redactEmail('test@example.com');
       expect(result).toMatch(/^hmac:[0-9a-f]{16}$/);
     });
+
+    it('should throw when LOG_REDACTION_SECRET is missing in production', () => {
+      const originalEnv = process.env.NODE_ENV;
+      const originalSecret = process.env.LOG_REDACTION_SECRET;
+      try {
+        process.env.NODE_ENV = 'production';
+        delete process.env.LOG_REDACTION_SECRET;
+        expect(() => redactEmail('test@example.com')).toThrow('LOG_REDACTION_SECRET must be set in production');
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+        if (originalSecret !== undefined) process.env.LOG_REDACTION_SECRET = originalSecret;
+      }
+    });
+
+    it('should use provided LOG_REDACTION_SECRET when set', () => {
+      const originalSecret = process.env.LOG_REDACTION_SECRET;
+      try {
+        process.env.LOG_REDACTION_SECRET = 'test-secret-value';
+        const result = redactEmail('test@example.com');
+        expect(result).toMatch(/^hmac:[0-9a-f]{16}$/);
+        // Different secret should produce different output than dev fallback
+        delete process.env.LOG_REDACTION_SECRET;
+        const devResult = redactEmail('test@example.com');
+        expect(result).not.toBe(devResult);
+      } finally {
+        if (originalSecret !== undefined) {
+          process.env.LOG_REDACTION_SECRET = originalSecret;
+        } else {
+          delete process.env.LOG_REDACTION_SECRET;
+        }
+      }
+    });
   });
 
   describe('logSecurityEvent', () => {
