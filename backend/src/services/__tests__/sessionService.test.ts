@@ -253,6 +253,23 @@ describe('SessionService', () => {
       expect(result).toHaveProperty('authenticatedAt');
       expect(result?.authenticatedAt).toBeInstanceOf(Date);
     });
+
+    it('should return undefined authenticatedAt when created_at is missing', async () => {
+      const mockUser = {
+        id: 'user-789',
+        email: 'nodate@example.com',
+        name: 'No Date User',
+        role: 'Member',
+        // no created_at field
+      };
+
+      mockQuery.mockResolvedValueOnce(mockResult({ rows: [mockUser] }));
+
+      const result = await validateSession('session-no-created-at');
+
+      expect(result).toBeDefined();
+      expect(result?.authenticatedAt).toBeUndefined();
+    });
   });
 
   describe('revokeSession', () => {
