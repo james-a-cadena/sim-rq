@@ -369,6 +369,11 @@ export const logSecurityEvent = async (
 
     const redactedEmail = details.userEmail ? redactEmail(details.userEmail) : 'anonymous';
 
+    const sanitizedDetails = {
+      ...details,
+      ...(details.userEmail && { userEmail: redactedEmail }),
+    };
+
     const values = [
       details.userId || null,
       redactedEmail,
@@ -376,7 +381,7 @@ export const logSecurityEvent = async (
       action,
       EntityType.AUTH,
       null,
-      JSON.stringify(details),
+      JSON.stringify(sanitizedDetails),
       ipAddress || null,
       userAgent || null,
     ];

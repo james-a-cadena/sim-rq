@@ -595,6 +595,11 @@ describe('AuditService', () => {
 
       // The redacted value should match what redactEmail produces
       expect(callArgs[1]).toBe(redactEmail(rawEmail));
+
+      // The details JSON (index 6) must NOT contain the raw email
+      const detailsJson = callArgs[6];
+      expect(detailsJson).not.toContain(rawEmail);
+      expect(detailsJson).toContain(redactEmail(rawEmail));
     });
 
     it('should store "anonymous" when no email is provided', async () => {
