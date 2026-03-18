@@ -21,6 +21,7 @@ export interface SessionUser {
   email: string;
   name: string;
   role: string;
+  authenticatedAt?: Date;
 }
 
 /**
@@ -85,7 +86,7 @@ export async function validateSession(sessionId: string): Promise<SessionUser | 
   // This allows proper "fail closed" behavior in security-sensitive contexts
   // Note: We query expires_at for app-level verification but still check in SQL as primary defense
   const result = await query(
-    `SELECT u.id, u.email, u.name, u.role, u.deleted_at, rt.expires_at
+    `SELECT u.id, u.email, u.name, u.role, u.deleted_at, rt.expires_at, rt.created_at
      FROM refresh_tokens rt
      JOIN users u ON rt.user_id = u.id
      WHERE rt.token_hash = $1
@@ -118,6 +119,7 @@ export async function validateSession(sessionId: string): Promise<SessionUser | 
     email: result.rows[0].email,
     name: result.rows[0].name,
     role: result.rows[0].role,
+    authenticatedAt: result.rows[0].created_at ? new Date(result.rows[0].created_at) : undefined,
   };
 }
 

@@ -215,6 +215,61 @@ describe('SessionService', () => {
 
       await expect(validateSession('session-id')).rejects.toThrow('Database error');
     });
+
+    it('should return authenticatedAt as a Date when created_at is present', async () => {
+      const createdAt = new Date('2026-03-16T10:00:00.000Z');
+      const mockUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test User',
+        role: 'Admin',
+        created_at: createdAt.toISOString(),
+      };
+
+      mockQuery.mockResolvedValueOnce(mockResult({ rows: [mockUser] }));
+
+      const result = await validateSession('valid-session-id');
+
+      expect(result).toBeDefined();
+      expect(result?.authenticatedAt).toBeInstanceOf(Date);
+      expect(result?.authenticatedAt?.getTime()).toBe(createdAt.getTime());
+    });
+
+    it('should include authenticatedAt in SessionUser result', async () => {
+      const createdAt = new Date(Date.now() - 5 * 60 * 1000); // 5 minutes ago
+      const mockUser = {
+        id: 'user-456',
+        email: 'another@example.com',
+        name: 'Another User',
+        role: 'Member',
+        created_at: createdAt.toISOString(),
+      };
+
+      mockQuery.mockResolvedValueOnce(mockResult({ rows: [mockUser] }));
+
+      const result = await validateSession('another-session-id');
+
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('authenticatedAt');
+      expect(result?.authenticatedAt).toBeInstanceOf(Date);
+    });
+
+    it('should return undefined authenticatedAt when created_at is missing', async () => {
+      const mockUser = {
+        id: 'user-789',
+        email: 'nodate@example.com',
+        name: 'No Date User',
+        role: 'Member',
+        // no created_at field
+      };
+
+      mockQuery.mockResolvedValueOnce(mockResult({ rows: [mockUser] }));
+
+      const result = await validateSession('session-no-created-at');
+
+      expect(result).toBeDefined();
+      expect(result?.authenticatedAt).toBeUndefined();
+    });
   });
 
   describe('revokeSession', () => {
