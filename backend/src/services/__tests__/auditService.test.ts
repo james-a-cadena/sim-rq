@@ -25,6 +25,8 @@ import {
   logRequestAudit,
   getAuditLogs,
   getAuditLogCount,
+  logSecurityEvent,
+  redactEmail,
   AuditAction,
   EntityType,
 } from '../auditService';
@@ -504,6 +506,123 @@ describe('AuditService', () => {
       expect(query).toContain('user_id = $1');
       expect(query).toContain('action = $2');
       expect(query).toContain('entity_type = $3');
+    });
+  });
+
+  describe('redactEmail', () => {
+    it('should return a string starting with "hmac:"', () => {
+      const result = redactEmail('john@example.com');
+      expect(result).toMatch(/^hmac:/);
+    });
+
+    it('should produce the same output for the same input (deterministic)', () => {
+      const email = 'john@example.com';
+      expect(redactEmail(email)).toBe(redactEmail(email));
+    });
+
+    it('should produce different outputs for different inputs', () => {
+      expect(redactEmail('alice@example.com')).not.toBe(redactEmail('bob@example.com'));
+    });
+
+    it('should never contain the original email substring', () => {
+      const email = 'john@example.com';
+      const result = redactEmail(email);
+      expect(result).not.toContain(email);
+      expect(result).not.toContain('john');
+      expect(result).not.toContain('example.com');
+    });
+
+    it('should produce a token of the expected format "hmac:<16 hex chars>"', () => {
+      const result = redactEmail('test@example.com');
+      expect(result).toMatch(/^hmac:[0-9a-f]{16}$/);
+    });
+
+    it('should throw when LOG_REDACTION_SECRET is missing in production', () => {
+      const originalEnv = process.env.NODE_ENV;
+      const originalSecret = process.env.LOG_REDACTION_SECRET;
+      try {
+        process.env.NODE_ENV = 'production';
+        delete process.env.LOG_REDACTION_SECRET;
+        expect(() => redactEmail('test@example.com')).toThrow('LOG_REDACTION_SECRET must be set in production');
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+        if (originalSecret !== undefined) process.env.LOG_REDACTION_SECRET = originalSecret;
+      }
+    });
+
+    it('should use provided LOG_REDACTION_SECRET when set', () => {
+      const originalSecret = process.env.LOG_REDACTION_SECRET;
+      try {
+        process.env.LOG_REDACTION_SECRET = 'test-secret-value';
+        const result = redactEmail('test@example.com');
+        expect(result).toMatch(/^hmac:[0-9a-f]{16}$/);
+        // Different secret should produce different output than dev fallback
+        delete process.env.LOG_REDACTION_SECRET;
+        const devResult = redactEmail('test@example.com');
+        expect(result).not.toBe(devResult);
+      } finally {
+        if (originalSecret !== undefined) {
+          process.env.LOG_REDACTION_SECRET = originalSecret;
+        } else {
+          delete process.env.LOG_REDACTION_SECRET;
+        }
+      }
+    });
+  });
+
+  describe('logSecurityEvent', () => {
+    it('should store the redacted email (not the raw email) in the DB INSERT', async () => {
+      mockPoolQuery.mockResolvedValueOnce(mockResult({}));
+
+      const rawEmail = 'victim@example.com';
+      await logSecurityEvent(
+        AuditAction.AUTH_FAILURE,
+        { reason: 'invalid password', userEmail: rawEmail },
+        '1.2.3.4',
+        'TestAgent/1.0'
+      );
+
+      expect(mockPoolQuery).toHaveBeenCalledTimes(1);
+      const callArgs = mockPoolQuery.mock.calls[0][1];
+
+      // user_email (index 1) must NOT contain raw email, user_name (index 2) is a placeholder
+      expect(callArgs[1]).not.toBe(rawEmail);
+      expect(callArgs[2]).not.toBe(rawEmail);
+
+      // user_email should be the hmac token; user_name is a semantic placeholder
+      expect(callArgs[1]).toMatch(/^hmac:[0-9a-f]{16}$/);
+      expect(callArgs[2]).toBe('[security_event]');
+
+      // The redacted value should match what redactEmail produces
+      expect(callArgs[1]).toBe(redactEmail(rawEmail));
+
+      // The details JSON (index 6) must NOT contain the raw email
+      const detailsJson = callArgs[6];
+      expect(detailsJson).not.toContain(rawEmail);
+      expect(detailsJson).toContain(redactEmail(rawEmail));
+    });
+
+    it('should store "anonymous" when no email is provided', async () => {
+      mockPoolQuery.mockResolvedValueOnce(mockResult({}));
+
+      await logSecurityEvent(
+        AuditAction.AUTH_FAILURE,
+        { reason: 'missing token' },
+        '1.2.3.4'
+      );
+
+      expect(mockPoolQuery).toHaveBeenCalledTimes(1);
+      const callArgs = mockPoolQuery.mock.calls[0][1];
+      expect(callArgs[1]).toBe('anonymous'); // user_email
+      expect(callArgs[2]).toBe('[security_event]'); // user_name is always the semantic placeholder
+    });
+
+    it('should not throw on database error (fail-safe)', async () => {
+      mockPoolQuery.mockRejectedValueOnce(new Error('DB error'));
+
+      await expect(
+        logSecurityEvent(AuditAction.ACCESS_DENIED, { reason: 'forbidden' })
+      ).resolves.toBeUndefined();
     });
   });
 });

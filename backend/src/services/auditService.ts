@@ -1,6 +1,25 @@
+import crypto from 'crypto';
 import { Request } from 'express';
 import pool from '../db';
 import { logger } from '../middleware/logger';
+
+/**
+ * Redact an email address using HMAC-SHA256.
+ * Returns a token of the form "hmac:<first16charsOfHexDigest>" to allow
+ * log correlation without exposing PII.
+ */
+export const redactEmail = (email: string): string => {
+  const secret = process.env.LOG_REDACTION_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('LOG_REDACTION_SECRET must be set in production');
+    }
+    logger.warn('LOG_REDACTION_SECRET is not set; using dev fallback for email redaction');
+    return `hmac:${crypto.createHmac('sha256', 'sim-rq-log-redaction-dev').update(email).digest('hex').slice(0, 16)}`;
+  }
+  const digest = crypto.createHmac('sha256', secret).update(email).digest('hex');
+  return `hmac:${digest.slice(0, 16)}`;
+};
 
 export enum AuditAction {
   // Authentication
@@ -340,6 +359,13 @@ export const logSecurityEvent = async (
   ipAddress?: string,
   userAgent?: string
 ): Promise<void> => {
+  // Compute redaction outside try so the catch block can log without PII
+  const redactedEmail = details.userEmail ? redactEmail(details.userEmail) : 'anonymous';
+  const sanitizedDetails = {
+    ...details,
+    ...(details.userEmail && { userEmail: redactedEmail }),
+  };
+
   try {
     const query = `
       INSERT INTO audit_logs (
@@ -350,12 +376,12 @@ export const logSecurityEvent = async (
 
     const values = [
       details.userId || null,
-      details.userEmail || 'anonymous',
-      details.userEmail || 'anonymous',
+      redactedEmail,
+      '[security_event]', // user_name: distinct placeholder; actual identity is in user_email
       action,
       EntityType.AUTH,
       null,
-      JSON.stringify(details),
+      JSON.stringify(sanitizedDetails),
       ipAddress || null,
       userAgent || null,
     ];
@@ -371,6 +397,6 @@ export const logSecurityEvent = async (
     });
   } catch (error) {
     // Don't throw - security logging should not break application flow
-    logger.error('Failed to log security event', { error, action, details });
+    logger.error('Failed to log security event', { error, action, details: sanitizedDetails });
   }
 };
