@@ -359,6 +359,13 @@ export const logSecurityEvent = async (
   ipAddress?: string,
   userAgent?: string
 ): Promise<void> => {
+  // Compute redaction outside try so the catch block can log without PII
+  const redactedEmail = details.userEmail ? redactEmail(details.userEmail) : 'anonymous';
+  const sanitizedDetails = {
+    ...details,
+    ...(details.userEmail && { userEmail: redactedEmail }),
+  };
+
   try {
     const query = `
       INSERT INTO audit_logs (
@@ -367,17 +374,10 @@ export const logSecurityEvent = async (
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `;
 
-    const redactedEmail = details.userEmail ? redactEmail(details.userEmail) : 'anonymous';
-
-    const sanitizedDetails = {
-      ...details,
-      ...(details.userEmail && { userEmail: redactedEmail }),
-    };
-
     const values = [
       details.userId || null,
       redactedEmail,
-      redactedEmail,
+      '[security_event]', // user_name: distinct placeholder; actual identity is in user_email
       action,
       EntityType.AUTH,
       null,
@@ -397,6 +397,6 @@ export const logSecurityEvent = async (
     });
   } catch (error) {
     // Don't throw - security logging should not break application flow
-    logger.error('Failed to log security event', { error, action, details });
+    logger.error('Failed to log security event', { error, action, details: sanitizedDetails });
   }
 };

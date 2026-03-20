@@ -585,13 +585,13 @@ describe('AuditService', () => {
       expect(mockPoolQuery).toHaveBeenCalledTimes(1);
       const callArgs = mockPoolQuery.mock.calls[0][1];
 
-      // user_email (index 1) and user_name (index 2) must NOT contain raw email
+      // user_email (index 1) must NOT contain raw email, user_name (index 2) is a placeholder
       expect(callArgs[1]).not.toBe(rawEmail);
       expect(callArgs[2]).not.toBe(rawEmail);
 
-      // They should be the hmac token
+      // user_email should be the hmac token; user_name is a semantic placeholder
       expect(callArgs[1]).toMatch(/^hmac:[0-9a-f]{16}$/);
-      expect(callArgs[2]).toMatch(/^hmac:[0-9a-f]{16}$/);
+      expect(callArgs[2]).toBe('[security_event]');
 
       // The redacted value should match what redactEmail produces
       expect(callArgs[1]).toBe(redactEmail(rawEmail));
@@ -614,7 +614,7 @@ describe('AuditService', () => {
       expect(mockPoolQuery).toHaveBeenCalledTimes(1);
       const callArgs = mockPoolQuery.mock.calls[0][1];
       expect(callArgs[1]).toBe('anonymous'); // user_email
-      expect(callArgs[2]).toBe('anonymous'); // user_name
+      expect(callArgs[2]).toBe('[security_event]'); // user_name is always the semantic placeholder
     });
 
     it('should not throw on database error (fail-safe)', async () => {
