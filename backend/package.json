@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1006.0",
-    "@aws-sdk/lib-storage": "^3.709.0",
+    "@aws-sdk/lib-storage": "^3.1013.0",
     "@aws-sdk/s3-request-presigner": "^3.1006.0",
     "@azure/msal-node": "^3.8.3",
     "@socket.io/redis-adapter": "^8.3.0",
